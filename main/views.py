@@ -52,8 +52,14 @@ def lk(request):
     }
     return render(request, 'lk.html', context)
 
+
+@login_required()
 def dialog(request, pk):
-    return render(request, 'dialog.html')
+    messages = Message.objects.filter(dialog__id=pk)
+    context = {
+        'messages': messages,
+    }
+    return render(request, 'dialog.html', context)
 
 
 def run_messages_checker(request):
