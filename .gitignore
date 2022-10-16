@@ -18,3 +18,7 @@ config/local_settings.py
 .DS_Store
 celerybeat-schedule
 static
+.env.dev
+.docker/
+docker-compose.yml
+Dockerfile

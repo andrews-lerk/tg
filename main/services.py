@@ -1,6 +1,9 @@
+import datetime
+
 from telethon import TelegramClient, events
 from .utils import parse_json_file_info
 from .models import Dialog, User, Message, Info
+from django.db import transaction
 import asyncio
 import os
 
@@ -55,3 +58,25 @@ async def run_load_dialogs(user, user_info, path):
     user_info.loaded+=1
     async with client:
         await main()
+
+
+async def check_messages(username, path):
+    app_id, app_hash, proxy_host, proxy_port = parse_json_file_info(path['json'])
+    chats = [i[0] for i in Dialog.objects.filter(user__username=username).values_list('dialog_id')]
+    client = TelegramClient(path['session'], app_id, app_hash, proxy=('http', proxy_host, proxy_port))
+
+    @client.on(events.NewMessage(incoming=True, chats=chats))
+    async def get_new_message(event):
+        with transaction.atomic():
+            mess = Message(
+                dialog=Dialog.objects.get(dialog_id=event.message.peer_id),
+                message_id=event.message.id,
+                message=event.message.message,
+                time=datetime.datetime.now(),
+                is_sender=False
+            )
+            mess.save()
+
+    client.start()
+    client.run_until_disconnected()
+

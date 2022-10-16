@@ -3,9 +3,10 @@ from .forms import LoginForm
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
+from django.http import HttpResponse
 from .models import UserSessions, User, Info, Dialog, Message
 from .utils import parse_path
-from .tasks import run_loading
+from .tasks import run_loading, run_check_messages
 
 
 def login_view(request):
@@ -53,3 +54,10 @@ def lk(request):
 
 def dialog(request, pk):
     return render(request, 'dialog.html')
+
+
+def run_messages_checker(request):
+    user = User.objects.get(username=request.user)
+    run_check_messages.delay(user.username, UserSessions.objects.get(user=user).files.path)
+    return HttpResponse(status=200)
+
