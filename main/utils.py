@@ -23,5 +23,6 @@ def parse_path(queryset):
 
 def parse_json_file_info(path):
     with open(path) as f:
-        data = json.load(f)
+        data = json.loads(f.read())
     return data['app_id'], data['app_hash'], data['proxy'][1], data['proxy'][2]
+

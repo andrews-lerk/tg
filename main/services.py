@@ -1,82 +1,106 @@
 import datetime
 
 from telethon import TelegramClient, events
-from .utils import parse_json_file_info
-from .models import Dialog, User, Message, Info
+from .models import Dialog, Message
 from django.db import transaction
-import asyncio
 import os
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 
-def run(username, paths):
-    user = User.objects.get(username=username)
-    user_info = Info()
-    user_info.user = user
-    for path in paths:
-        asyncio.run(run_load_dialogs(user, user_info, path))
-    user.if_service = True
-    user.save()
-    user_info.save()
-
-
-async def run_load_dialogs(user, user_info, path):
-    app_id, app_hash, proxy_host, proxy_port = parse_json_file_info(path['json'])
-
+async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path):
     async def main():
         async for dialog in client.iter_dialogs():
             if dialog.is_user:
-                user_info.all_dialogs+=1
-                if dialog.unread_count == 0:
-                    user_info.read_dialogs+=1
-                d = Dialog(
-                    user=user,
-                    dialog_id=dialog.id,
-                    file_name_of_session=path['session'],
-                    title=dialog.name,
-                    last_message=dialog.message.text,
-                    is_last_message_out=dialog.message.out,
-                    time=dialog.date
-                )
-                d.save()
-                async for message in client.iter_messages(dialog):
-                    m = Message(
-                        dialog=d,
-                        message_id=message.id,
-                        message=message.text,
-                        time=message.date,
-                        is_sender=message.out
+                try:
+                    d = Dialog(
+                        user=user,
+                        dialog_id=dialog.id,
+                        file_name_of_session=path['session'],
+                        title=dialog.name,
+                        last_message=dialog.message.text,
+                        is_last_message_out=dialog.message.out,
+                        time=dialog.date
                     )
-                    m.save()
+                    d.save()
+                except:
+                    pass
+                async for message in client.iter_messages(dialog):
+                    try:
+                        m = Message(
+                            dialog=d,
+                            message_id=message.id,
+                            message=message.text,
+                            time=message.date,
+                            is_sender=message.out
+                        )
+                        m.save()
+                    except:
+                        pass
 
     client = TelegramClient(path['session'], app_id, app_hash, proxy=('http', proxy_host, proxy_port))
     await client.connect()
     if not await client.is_user_authorized():
-        user_info.not_loaded+=1
-        return ''
-    user_info.loaded+=1
+        raise Exception('Session fail')
     async with client:
         await main()
+        print('client on turned on!!!')
+
+        @client.on(events.NewMessage(incoming=True))
+        async def get_new_message(event):
+            try:
+                dialog = Dialog.objects.filter(dialog_id=event.chat_id).first()
+                dialog.last_message = event.message.message
+                dialog.time = datetime.datetime.now()
+                dialog.is_last_message_out = False
+                dialog.save()
+                mess = Message(
+                    dialog=Dialog.objects.filter(dialog_id=event.chat_id).first(),
+                    message_id=event.message.id,
+                    message=event.message.message,
+                    time=datetime.datetime.now(),
+                    is_sender=False
+                )
+                mess.save()
+            except:
+                pass
+
+        await client.run_until_disconnected()
 
 
-async def check_messages(username, path):
-    app_id, app_hash, proxy_host, proxy_port = parse_json_file_info(path['json'])
-    chats = [i[0] for i in Dialog.objects.filter(user__username=username).values_list('dialog_id')]
+async def send_message(app_id, app_hash, proxy_host, proxy_port, path, dialog, mess):
     client = TelegramClient(path['session'], app_id, app_hash, proxy=('http', proxy_host, proxy_port))
+    async with client:
+        message = await client.send_message(dialog.dialog_id, mess)
+        dialog.last_message = message.message
+        dialog.time = datetime.datetime.now()
+        dialog.is_last_message_out = True
+        dialog.save()
+        mess = Message(
+            dialog=dialog,
+            message_id=message.id,
+            message=message.message,
+            time=datetime.datetime.now(),
+            is_sender=True
+        )
+        mess.save()
 
-    @client.on(events.NewMessage(incoming=True, chats=chats))
-    async def get_new_message(event):
-        with transaction.atomic():
-            mess = Message(
-                dialog=Dialog.objects.get(dialog_id=event.message.peer_id),
-                message_id=event.message.id,
-                message=event.message.message,
-                time=datetime.datetime.now(),
-                is_sender=False
-            )
-            mess.save()
-
-    client.start()
-    client.run_until_disconnected()
-
+# async def check_messages(username, path):
+#     app_id, app_hash, proxy_host, proxy_port = parse_json_file_info(path['json'])
+#     chats = [i[0] for i in Dialog.objects.filter(user__username=username).values_list('dialog_id')]
+#     client = TelegramClient(path['session'], app_id, app_hash, proxy=('http', proxy_host, proxy_port))
+#     if not await client.is_user_authorized():
+#         raise Exception('Session failed')
+#
+#     @client.on(events.NewMessage(incoming=True, chats=chats))
+#     async def get_new_message(event):
+#         with transaction.atomic():
+#             mess = Message(
+#                 dialog=Dialog.objects.get(dialog_id=event.message.peer_id),
+#                 message_id=event.message.id,
+#                 message=event.message.message,
+#                 time=datetime.datetime.now(),
+#                 is_sender=False
+#             )
+#             mess.save()
+#     client.run_until_disconnected()

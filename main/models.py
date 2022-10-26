@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
@@ -5,6 +7,8 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import login
 from .managers import UserManager
+from config.settings import BASE_DIR, MEDIA_ROOT
+from config.celery import app
 
 
 class User(AbstractBaseUser, PermissionsMixin):
@@ -42,16 +46,35 @@ class Info(models.Model):
     all_dialogs = models.IntegerField(default=0)
 
 
+class WorkingTasks(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    task_uid = models.CharField(max_length=511)
+
+    def __str__(self):
+        return f'task - {self.task_uid}'
+
+    def delete(self, using=None, keep_parents=False):
+        app.control.revoke(self.task_uid, terminate=True, signal='SIGTERM')
+        super().delete()
+
+
 class UserSessions(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     files = models.FileField(upload_to=f'session_files/%Y_%m_%d_%H_%M')
 
+    def delete(self, using=None, keep_parents=True):
+        try:
+            os.remove(str(self.files.path))
+        except:
+            pass
+        super().delete()
+
 
 class Dialog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    dialog_id = models.IntegerField()
+    dialog_id = models.BigIntegerField()
     file_name_of_session = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
     last_message = models.TextField()
@@ -65,7 +88,7 @@ class Dialog(models.Model):
 class Message(models.Model):
     dialog = models.ForeignKey(Dialog, on_delete=models.CASCADE)
 
-    message_id = models.IntegerField()
+    message_id = models.BigIntegerField()
     message = models.TextField()
     time = models.DateTimeField()
     is_sender = models.BooleanField()

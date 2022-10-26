@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, UserSessions, Dialog, Message, Info
+from .models import User, UserSessions, Dialog, Message, Info, WorkingTasks
 from .forms import FilesForm
 
 
@@ -19,8 +19,13 @@ class MessagesInline(admin.StackedInline):
     extra = 0
 
 
+class WorkingTasksInline(admin.StackedInline):
+    model = WorkingTasks
+    extra = 0
+
+
 class UserAdmin(admin.ModelAdmin):
-    inlines = [SessionFilesInline, InfoInline, ]
+    inlines = [SessionFilesInline, InfoInline, WorkingTasksInline]
 
 
 class DialogAdmin(admin.ModelAdmin):

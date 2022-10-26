@@ -13,8 +13,7 @@
           <div class="col-9">
             <nav class="navbar navbar-expand-lg bg-light">
           <div class="container-fluid">
-            <a class="navbar-brand" href="#">Загружено аккаунтов: {{ info.loaded }}<br>
-                                             Загружено диалогов: {{ info.all_dialogs }}</a>
+             <a href="{% url 'messages' %}" class="btn btn-primary">Обновить состояние диалогов</a>
           </div>
         </nav>
           </div>
