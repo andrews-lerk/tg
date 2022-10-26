@@ -5,9 +5,7 @@ from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import login
 from .managers import UserManager
-from config.settings import BASE_DIR, MEDIA_ROOT
 from config.celery import app
 
 
@@ -26,8 +24,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = []
 
     class Meta:
-        verbose_name = _('Profile_')
-        verbose_name_plural = _('Profiles')
+        verbose_name = _('Личный кабинет клиента')
+        verbose_name_plural = _('Личные кабинеты клиентов')
 
     def save(self, *args, **kwargs):
         if not self.is_superuser:
@@ -45,6 +43,10 @@ class Info(models.Model):
     read_dialogs = models.IntegerField(default=0)
     all_dialogs = models.IntegerField(default=0)
 
+    class Meta:
+        verbose_name = _('Инфа по личному кабинету')
+        verbose_name_plural = _('Инфа по личному кабинету')
+
 
 class WorkingTasks(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -52,6 +54,10 @@ class WorkingTasks(models.Model):
 
     def __str__(self):
         return f'task - {self.task_uid}'
+
+    class Meta:
+        verbose_name = _('ID работающего обработчика (удалить если хотите остановить обслуживание клиента)')
+        verbose_name_plural = _('ID работающих обработчиков (удалить если хотите остановить обслуживание клиента)')
 
     def delete(self, using=None, keep_parents=False):
         app.control.revoke(self.task_uid, terminate=True, signal='SIGTERM')
@@ -62,6 +68,10 @@ class UserSessions(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     files = models.FileField(upload_to=f'session_files/%Y_%m_%d_%H_%M')
+
+    class Meta:
+        verbose_name = _('Аккаунт ТГ')
+        verbose_name_plural = _('Аккаунты ТГ')
 
     def delete(self, using=None, keep_parents=True):
         try:
@@ -80,6 +90,10 @@ class Dialog(models.Model):
     last_message = models.TextField()
     is_last_message_out = models.BooleanField()
     time = models.DateTimeField()
+
+    class Meta:
+        verbose_name = _('Диалог')
+        verbose_name_plural = _('Все диалоги')
 
     def get_absolute_url(self):
         return reverse('dialog', args=[self.pk])
