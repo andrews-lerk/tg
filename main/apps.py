@@ -6,5 +6,4 @@ class MainConfig(AppConfig):
     name = 'main'
 
     def ready(self):
-        print('dddd')
         import main.signals
