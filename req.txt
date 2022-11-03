@@ -12,6 +12,8 @@ click-repl==0.2.0
 Deprecated==1.2.13
 Django==4.1.2
 flower==1.2.0
+gevent==22.10.2
+greenlet==2.0.0
 humanize==4.4.0
 kombu==5.2.4
 packaging==21.3
@@ -34,3 +36,5 @@ tornado==6.2
 vine==5.0.0
 wcwidth==0.2.5
 wrapt==1.14.1
+zope.event==4.5.0
+zope.interface==5.5.0
