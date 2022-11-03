@@ -8,5 +8,8 @@ from .utils import parse_json_file_info
 def run(username, path):
     user = User.objects.get(username=username)
     app_id, app_hash, proxy_host, proxy_port = parse_json_file_info(path['json'])
-    asyncio.run(run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path))
-
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path))
+    except:
+        asyncio.run(run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path))

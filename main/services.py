@@ -12,13 +12,19 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path)
     async def main():
         async for dialog in client.iter_dialogs():
             if dialog.is_user:
+                if dialog.name == 'Spam Info Bot' or dialog.name == 'Telegram':
+                    continue
                 try:
+                    if dialog.message.text == None:
+                        mess = '"Голосовое сообщение или медиа файл"'
+                    else:
+                        mess = dialog.message.text
                     d = Dialog(
                         user=user,
                         dialog_id=dialog.id,
                         file_name_of_session=path['session'],
                         title=dialog.name,
-                        last_message=dialog.message.text,
+                        last_message=mess,
                         is_last_message_out=dialog.message.out,
                         time=dialog.date
                     )
@@ -27,10 +33,14 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path)
                     pass
                 async for message in client.iter_messages(dialog):
                     try:
+                        if message.text == None:
+                            mess = '"Голосовое сообщение или медиа файл"'
+                        else:
+                            mess = message.text
                         m = Message(
                             dialog=d,
                             message_id=message.id,
-                            message=message.text,
+                            message=mess,
                             time=message.date,
                             is_sender=message.out
                         )
@@ -54,10 +64,14 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path)
                 dialog.time = datetime.datetime.now()
                 dialog.is_last_message_out = False
                 dialog.save()
+                if event.message.message == None:
+                    mess = '"Голосовое сообщение или медиа файл"'
+                else:
+                    mess = event.message.message
                 mess = Message(
                     dialog=Dialog.objects.filter(dialog_id=event.chat_id).first(),
                     message_id=event.message.id,
-                    message=event.message.message,
+                    message=mess,
                     time=datetime.datetime.now(),
                     is_sender=False
                 )
