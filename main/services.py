@@ -84,7 +84,7 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path,
                 except:
                     print('user already deleted')
                 break
-            await asyncio.sleep()
+            await asyncio.sleep(3600)
         return
 
     loop.create_task(clock(client, user))
