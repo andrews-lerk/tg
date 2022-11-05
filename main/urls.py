@@ -5,5 +5,6 @@ urlpatterns = [
     path('', login_view, name='login'),
     path('messages', lk, name='messages'),
     path('dialog/<int:pk>', dialog, name='dialog'),
-    # path('run_check_messages/', run_check_messages, name='run_check_messages'),
+    path('messages/not_read', lk_not_read, name='messages-unread'),
+    path('messages/only-in', lk_only_in, name='messages-in')
 ]

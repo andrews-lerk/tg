@@ -15,10 +15,24 @@
           <div class="container-fluid">
               <h3>Диалогов загружено: {{ all }}</h3>
               <h3>Непрочитанных: {{ not_read }}</h3>
-             <a href="{% url 'messages' %}" class="btn btn-primary">Обновить состояние диалогов</a>
           </div>
         </nav>
           </div>
+            <div class="col-9">
+                <nav class="navbar navbar-expand-lg bg-light">
+                    <div class="container-fluid">
+                    <p>
+              <a href="{% url 'messages' %}" class="btn btn-primary">Отбразить все</a>
+              </p>
+              <p>
+              <a href="{% url 'messages-unread' %}" class="btn btn-primary">Отобразить непрочитанные</a>
+              </p>
+                    <p>
+              <a href="{% url 'messages-in' %}" class="btn btn-primary">Отобразить только ответы</a>
+              </p>
+                </div>
+                </nav>
+            </div>
         </div>
     </div>
     <p></p>
@@ -28,15 +42,17 @@
         <div class="row justify-content-center">
           <div class="col-9">
               {% for dialog in dialogs %}
+
                 <div class="card">
               <div class="card-body">
-                <h5 class="card-title">{{ dialog.title }} - @{{ dialog.user_name }} - {{ dialog.phone_number }}
-                    {% if not dialog.is_read %}
+                  <div style="position: absolute; right: 0%">
+                   {% if not dialog.is_read %}
                     <svg class="bd-placeholder-img rounded me-2" width="20" height="20"
                        xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
                        preserveAspectRatio="xMidYMid slice" focusable="false"><rect width="100%" height="100%" fill="#007aff"></rect></svg>
                     {% endif %}
-                </h5>
+                  </div>
+                <h5 class="card-title">{{ dialog.title }} - @{{ dialog.user_name }} - {{ dialog.phone_number }}</h5>
                   <p class="card-text">{% if dialog.is_last_message_out %}<mark>Вы:</mark> {{ dialog.last_message| truncatewords:4 }}
                       {% else %}<mark>{{ dialog.title }}:</mark> {{ dialog.last_message| truncatewords:4 }}{% endif %}</p>
                 <a href="{{ dialog.get_absolute_url }}" class="btn btn-primary">Открыть диалог</a>

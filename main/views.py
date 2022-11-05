@@ -46,10 +46,34 @@ def lk(request):
     all_dialogs_value = len(dialogs)
     not_read_dialogs_value = len(dialogs.filter(is_read=False))
     context = {
-        # 'info': info,
         'dialogs': dialogs,
         'all': all_dialogs_value,
-        'not_read' : not_read_dialogs_value
+        'not_read': not_read_dialogs_value
+    }
+    return render(request, 'lk.html', context)
+
+
+@login_required()
+def lk_not_read(request):
+    user = User.objects.get(username=request.user)
+    dialogs = Dialog.objects.filter(user=user, is_read=False).order_by('-time')
+    not_read_dialogs_value = len(dialogs.filter(is_read=False))
+    context = {
+        'dialogs': dialogs,
+        'all': 0,
+        'not_read': not_read_dialogs_value
+    }
+    return render(request, 'lk.html', context)
+
+
+@login_required()
+def lk_only_in(request):
+    user = User.objects.get(username=request.user)
+    dialogs = Dialog.objects.filter(user=user, is_last_message_out=False).order_by('-time')
+    context = {
+        'dialogs': dialogs,
+        'all': 0,
+        'not_read': 0
     }
     return render(request, 'lk.html', context)
 
