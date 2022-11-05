@@ -1,14 +1,11 @@
 import asyncio
 import sqlite3
-import time
-
 from django.shortcuts import render, redirect
 from .forms import LoginForm
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
-from django.http import HttpResponse
-from .models import UserSessions, User, Info, Dialog, Message, WorkingTasks
+from .models import UserSessions, User, Dialog, Message
 from .utils import parse_path, parse_json_file_info
 from .tasks import run
 from .services import send_message
@@ -45,22 +42,21 @@ def lk(request):
         run_loading(user.username, paths)
         user.is_loading_process_started = True
         user.save()
-    # info = Info.objects.get(user=user)
     dialogs = Dialog.objects.filter(user=user).order_by('-time')
+    all_dialogs_value = len(dialogs)
+    not_read_dialogs_value = len(dialogs.filter(is_read=False))
     context = {
         # 'info': info,
-        'dialogs': dialogs
+        'dialogs': dialogs,
+        'all': all_dialogs_value,
+        'not_read' : not_read_dialogs_value
     }
     return render(request, 'lk.html', context)
 
 
 def run_loading(username, paths):
     for path in paths:
-        task = run.delay(username, path)
-        WorkingTasks.objects.create(
-            user=User.objects.get(username=username),
-            task_uid=task.id
-        )
+        run.delay(username, path)
 
 
 @login_required()
@@ -83,13 +79,13 @@ def dialog(request, pk):
                 continue
         return redirect('dialog', pk)
 
+    dialog = Dialog.objects.get(id=pk)
+    if not dialog.is_read:
+        dialog.is_read = True
+        dialog.save()
+
     messages = Message.objects.filter(dialog__id=pk).order_by('time')
     context = {
         'messages': messages,
     }
     return render(request, 'dialog.html', context)
-
-# def run_messages_checker(request):
-#     user = User.objects.get(username=request.user)
-#     run_check_messages.delay(user.username, UserSessions.objects.get(user=user).files.path)
-#     return HttpResponse(status=200)

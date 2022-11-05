@@ -35,35 +35,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         return super().save()
 
 
-class Info(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    loaded = models.IntegerField(default=0)
-    not_loaded = models.IntegerField(default=0)
-    read_dialogs = models.IntegerField(default=0)
-    all_dialogs = models.IntegerField(default=0)
-
-    class Meta:
-        verbose_name = _('Инфа по личному кабинету')
-        verbose_name_plural = _('Инфа по личному кабинету')
-
-
-class WorkingTasks(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    task_uid = models.CharField(max_length=511)
-
-    def __str__(self):
-        return f'task - {self.task_uid}'
-
-    class Meta:
-        verbose_name = _('ID работающего обработчика (удалить если хотите остановить обслуживание клиента)')
-        verbose_name_plural = _('ID работающих обработчиков (удалить если хотите остановить обслуживание клиента)')
-
-    def delete(self, using=None, keep_parents=False):
-        app.control.revoke(self.task_uid, terminate=True, signal='SIGTERM')
-        super().delete()
-
-
 class UserSessions(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
@@ -87,8 +58,11 @@ class Dialog(models.Model):
     dialog_id = models.BigIntegerField()
     file_name_of_session = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
+    user_name = models.CharField(max_length=511)
+    phone_number = models.CharField(max_length=127)
     last_message = models.TextField()
     is_last_message_out = models.BooleanField()
+    is_read = models.BooleanField()
     time = models.DateTimeField()
 
     class Meta:

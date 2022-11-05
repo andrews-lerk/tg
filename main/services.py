@@ -1,21 +1,30 @@
+import asyncio
 import datetime
 
+from django.utils import timezone
 from telethon import TelegramClient, events
 from .models import Dialog, Message
-from django.db import transaction
 import os
 
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 
 
-async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path):
+async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path, loop):
     async def main():
         async for dialog in client.iter_dialogs():
             if dialog.is_user:
                 if dialog.name == 'Spam Info Bot' or dialog.name == 'Telegram':
                     continue
+                if dialog.entity.username is None:
+                    username = 'Не удалось получить юзернейм'
+                else:
+                    username = dialog.entity.username
+                if dialog.entity.phone is None:
+                    phone = 'Телефон скрыт'
+                else:
+                    phone = dialog.entity.phone
                 try:
-                    if dialog.message.text == None:
+                    if dialog.message.message is None:
                         mess = '"Голосовое сообщение или медиа файл"'
                     else:
                         mess = dialog.message.text
@@ -24,8 +33,11 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path)
                         dialog_id=dialog.id,
                         file_name_of_session=path['session'],
                         title=dialog.name,
+                        user_name=username,
+                        phone_number=phone,
                         last_message=mess,
                         is_last_message_out=dialog.message.out,
+                        is_read=dialog.message.out,
                         time=dialog.date
                     )
                     d.save()
@@ -33,7 +45,7 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path)
                     pass
                 async for message in client.iter_messages(dialog):
                     try:
-                        if message.text == None:
+                        if message.message is None:
                             mess = '"Голосовое сообщение или медиа файл"'
                         else:
                             mess = message.text
@@ -52,6 +64,30 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path)
     await client.connect()
     if not await client.is_user_authorized():
         raise Exception('Session fail')
+
+    async def clock(client, user):
+        attempts = 1
+        while True:
+            if timezone.now() > user.date_expired:
+                print(f'Disconnect client and delete user attempt {attempts}')
+                await client.disconnect()
+                if client.is_connected():
+                    if attempts>=5:
+                        print('disconnect not success!!! attempts more than 5')
+                        break
+                    attempts+=1
+                    await client.disconnect()
+                    continue
+                await asyncio.sleep(60)
+                try:
+                    user.delete()
+                except:
+                    print('user already deleted')
+                break
+            await asyncio.sleep()
+        return
+
+    loop.create_task(clock(client, user))
     async with client:
         await main()
         print('client on turned on!!!')
@@ -63,8 +99,9 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path)
                 dialog.last_message = event.message.message
                 dialog.time = datetime.datetime.now()
                 dialog.is_last_message_out = False
+                dialog.is_read = False
                 dialog.save()
-                if event.message.message == None:
+                if event.message.message is None:
                     mess = '"Голосовое сообщение или медиа файл"'
                 else:
                     mess = event.message.message
@@ -89,6 +126,7 @@ async def send_message(app_id, app_hash, proxy_host, proxy_port, path, dialog, m
         dialog.last_message = message.message
         dialog.time = datetime.datetime.now()
         dialog.is_last_message_out = True
+        dialog.is_read = True
         dialog.save()
         mess = Message(
             dialog=dialog,
@@ -98,23 +136,3 @@ async def send_message(app_id, app_hash, proxy_host, proxy_port, path, dialog, m
             is_sender=True
         )
         mess.save()
-
-# async def check_messages(username, path):
-#     app_id, app_hash, proxy_host, proxy_port = parse_json_file_info(path['json'])
-#     chats = [i[0] for i in Dialog.objects.filter(user__username=username).values_list('dialog_id')]
-#     client = TelegramClient(path['session'], app_id, app_hash, proxy=('http', proxy_host, proxy_port))
-#     if not await client.is_user_authorized():
-#         raise Exception('Session failed')
-#
-#     @client.on(events.NewMessage(incoming=True, chats=chats))
-#     async def get_new_message(event):
-#         with transaction.atomic():
-#             mess = Message(
-#                 dialog=Dialog.objects.get(dialog_id=event.message.peer_id),
-#                 message_id=event.message.id,
-#                 message=event.message.message,
-#                 time=datetime.datetime.now(),
-#                 is_sender=False
-#             )
-#             mess.save()
-#     client.run_until_disconnected()
