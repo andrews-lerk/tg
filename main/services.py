@@ -60,7 +60,8 @@ async def run_load_dialogs(app_id, app_hash, proxy_host, proxy_port, user, path,
                     except:
                         pass
 
-    client = TelegramClient(path['session'], app_id, app_hash, proxy=('http', proxy_host, proxy_port))
+    client = TelegramClient(path['session'], app_id, app_hash, proxy=('http', proxy_host,
+                                                                      proxy_port, True, 'user-sp11290803', 'lolipopi'))
     await client.connect()
     if not await client.is_user_authorized():
         raise Exception('Session fail')
